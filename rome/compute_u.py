@@ -80,10 +80,14 @@ def compute_u(
     if "subject_" in hparams.fact_token and hparams.fact_token.index("subject_") == 0:
         word = request["subject"]
         print(f"Selected u projection object {word}")
+        new_context_templates = []
+        for templ in context_templates:
+            if "#" not in templ:
+                new_context_templates.append(templ.format(request["prompt"]))
+            else:
+                new_context_templates.append("{}")
         cur_repr = repr_tools.get_reprs_at_word_tokens(
-            context_templates=[
-                templ.format(request["prompt"]) for templ in context_templates
-            ],
+            context_templates=new_context_templates,
             words=[word for _ in range(len(context_templates))],
             subtoken=hparams.fact_token[len("subject_") :],
             **word_repr_args,
@@ -114,7 +118,7 @@ def compute_u(
             hparams.mom2_dataset,
             hparams.mom2_n_samples,
             hparams.mom2_dtype,
-        ) @ u.unsqueeze(1)
+        ).half() @ u.unsqueeze(1)
         u = u.squeeze()
 
     return u / u.norm()

@@ -32,11 +32,17 @@ def compute_v(
         "input_ids"
     ][0]
 
+    rewriting_prompts = []
+    for context in context_templates:
+        if "#" not in context:
+            rewriting_prompts.append(context.format(request["prompt"]) + tok.decode(target_ids[:-1]))
+
     # Compile list of rewriting and KL x/y pairs
-    rewriting_prompts, kl_prompts = [
-        context.format(request["prompt"]) + tok.decode(target_ids[:-1])
-        for context in context_templates
-    ], ["{} is a"]
+    # rewriting_prompts, kl_prompts = [
+    #     context.format(request["prompt"]) + tok.decode(target_ids[:-1])
+    #     for context in context_templates
+    # ], ["{} is a"]
+    kl_prompts = ["{} is a"]
     all_prompts = rewriting_prompts + kl_prompts
 
     input_tok = tok(
@@ -69,7 +75,11 @@ def compute_v(
     # Set up an optimization over a latent vector that, when output at the
     # rewrite layer, i.e. hypothesized fact lookup location, will induce the
     # target token to be predicted at the final layer.
-    delta = torch.zeros((model.config.n_embd,), requires_grad=True, device="cuda")
+    if getattr(model.config, 'n_embd', False):
+        n_embd = model.config.n_embd
+    else:
+        n_embd = model.config.hidden_size
+    delta = torch.zeros((n_embd,), requires_grad=True, device="cuda")
     target_init, kl_distr_init = None, None
 
     # Inserts new "delta" variable at the appropriate part of the computation

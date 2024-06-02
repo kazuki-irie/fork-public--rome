@@ -31,7 +31,10 @@ class LogitLens:
     ):
         self.disabled = disabled
         self.model, self.tok = model, tok
-        self.n_layers = self.model.config.n_layer
+        if getattr(model.config, 'n_layer', False):
+            self.n_layers = self.model.config.n_layer
+        else:
+            self.n_layers = self.model.config.num_hidden_layers
 
         self.lm_head, self.ln_f = (
             nethook.get_module(model, lm_head_module),
